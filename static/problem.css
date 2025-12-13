@@ -82,19 +82,7 @@ body{
 }
 
 /* MAIN SPLIT */
-.problem-main{
-  flex:1;
-  display:grid;
-  grid-template-columns: 1.1fr .9fr;
-  gap:16px;
-  padding:16px;
-}
 
-@media (max-width:900px){
-  .problem-main{
-    grid-template-columns:1fr;
-  }
-}
 
 /* =========================
    LEFT: DESCRIPTION
@@ -400,3 +388,70 @@ select.btn:focus{
   font-size:16px;
 }
 
+.problem-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 16px;
+  height: calc(100vh - 60px);
+}
+
+@media (max-width:900px){
+  .problem-layout{
+    grid-template-columns: 1fr;
+  }
+}
+
+.editor-toolbar{
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+.problem-topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:12px 20px;
+  background:var(--panel);
+  border-bottom:1px solid var(--line);
+}
+
+.nav-left,
+.nav-center,
+.nav-right{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.back-link{
+  color:var(--muted);
+  text-decoration:none;
+  font-size:14px;
+}
+
+.back-link:hover{
+  color:var(--text);
+}
+
+.nav-btn{
+  background:rgba(255,255,255,0.06);
+  border:1px solid var(--line);
+  color:var(--text);
+  padding:6px 14px;
+  border-radius:10px;
+  font-size:14px;
+  cursor:pointer;
+  transition:all .2s ease;
+}
+
+.nav-btn:hover{
+  background:rgba(255,255,255,0.12);
+  transform:translateY(-1px);
+}
+
+.nav-btn:disabled{
+  opacity:.4;
+  cursor:not-allowed;
+  transform:none;
+}

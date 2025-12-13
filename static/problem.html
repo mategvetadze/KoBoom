@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>KoBoom – Problem</title>
+<link rel="stylesheet" href="/static/problem.css">
+</head>
+
+<body class="problem-page">
+
+<div class="problem-topbar">
+  <div class="nav-left">
+    <a href="/" class="back-link">← Problem List</a>
+  </div>
+
+  <div class="nav-center">
+    <button type="button" class="nav-btn" id="prevProblem">⟵ Prev</button>
+<button type="button" class="nav-btn" id="nextProblem">Next ⟶</button>
+
+  </div>
+
+  <div class="nav-right">
+    <button class="btn">Run</button>
+    <button class="btn primary">Submit</button>
+  </div>
+</div>
+
+
+<div class="problem-layout">
+
+  <!-- LEFT -->
+  <section class="problem-desc">
+    <h1 id="problemTitle"></h1>
+    <div class="problem-meta" id="problemMeta"></div>
+    <p id="problemDescription"></p>
+    <pre id="problemExample"></pre>
+  </section>
+
+  <!-- RIGHT -->
+  <section class="problem-code">
+    <div class="code-card">
+      <div class="editor-toolbar">
+        <select class="lang-pill">
+          <option value="java">Java</option>
+          <option value="cpp">C++</option>
+          <option value="python">Python</option>
+          <option value="go">Go</option>
+          <option value="js">JavaScript</option>
+        </select>
+
+        <div class="editor-actions">
+          <button title="Bookmark">🔖</button>
+          <button title="Format">{ }</button>
+          <button title="Reset">↺</button>
+          <button title="Fullscreen">⤢</button>
+        </div>
+      </div>
+
+      <textarea class="code-editor"></textarea>
+    </div>
+
+    <div class="testcases">
+      <!-- keep your testcase UI -->
+    </div>
+  </section>
+
+</div>
+
+<script src="/static/problem.js"></script>
+
+</body>
+</html>

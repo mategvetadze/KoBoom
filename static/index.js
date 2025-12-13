@@ -1,6 +1,8 @@
 /* =====================
    STATE
 ===================== */
+document.addEventListener("DOMContentLoaded", () => {
+
 
 const API_BASE = "http://127.0.0.1:8000";
 
@@ -67,7 +69,9 @@ function render() {
       .join("");
 
     return `
-      <tr onclick="location.href='problem.html?id=${p.id}'">
+    <tr onclick="location.href='/problem?id=${p.id}'">
+
+
         <td>
           <span class="status ${p.status}">
             ${p.status === "solved" ? "Solved" : "To Do"}
@@ -105,7 +109,8 @@ fetch(`${API_BASE}/api/problems`)
       id: p.id,
       title: p.title,
       diff: p.difficulty,
-      tags: p.tags.split(","),
+      tags: p.tags.split(",").map(t => t.trim()),
+
       acc: Math.floor(Math.random() * 30 + 40) + "%",
       status: "todo"
     }));
@@ -187,3 +192,84 @@ if (savedTheme === "light") {
   document.body.classList.add("light");
   toggleThemeBtn.textContent = "🌞";
 }
+
+
+/* =====================
+   SIMPLE AUTH (HOME PAGE)
+===================== */
+
+const openAuthBtn = document.getElementById("openAuth");
+const authOverlay = document.getElementById("authOverlay");
+const closeAuthBtn = document.getElementById("closeAuth");
+
+const authTabs = document.querySelectorAll(".auth-tabs .tab");
+const loginForm = document.getElementById("loginForm");
+const signupForm = document.getElementById("signupForm");
+const authTitle = document.getElementById("authTitle");
+
+/* OPEN / CLOSE MODAL */
+if (openAuthBtn && authOverlay) {
+  openAuthBtn.onclick = () => authOverlay.classList.add("active");
+}
+
+if (closeAuthBtn && authOverlay) {
+  closeAuthBtn.onclick = () => authOverlay.classList.remove("active");
+}
+
+/* TAB SWITCH */
+if (authTabs.length) {
+  authTabs.forEach(tab => {
+    tab.onclick = () => {
+      authTabs.forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+
+      if (tab.dataset.tab === "login") {
+        loginForm.classList.add("active");
+        signupForm.classList.remove("active");
+        authTitle.textContent = "Log In";
+      } else {
+        signupForm.classList.add("active");
+        loginForm.classList.remove("active");
+        authTitle.textContent = "Sign Up";
+      }
+    };
+  });
+}
+
+/* LOGIN */
+if (loginForm) {
+  loginForm.onsubmit = e => {
+    e.preventDefault();
+
+    const email = loginForm.querySelector("input[type='email']").value;
+    const username = email.split("@")[0];
+
+    localStorage.setItem("user", JSON.stringify({ username, email }));
+
+    openAuthBtn.textContent = username;
+    authOverlay.classList.remove("active");
+  };
+}
+
+/* SIGN UP */
+if (signupForm) {
+  signupForm.onsubmit = e => {
+    e.preventDefault();
+
+    const username = signupForm.querySelector("input[type='text']").value;
+    const email = signupForm.querySelector("input[type='email']").value;
+
+    localStorage.setItem("user", JSON.stringify({ username, email }));
+
+    openAuthBtn.textContent = username;
+    authOverlay.classList.remove("active");
+  };
+}
+
+/* LOAD USER ON PAGE LOAD */
+const savedUser = JSON.parse(localStorage.getItem("user"));
+if (savedUser && openAuthBtn) {
+  openAuthBtn.textContent = savedUser.username;
+}
+
+});
