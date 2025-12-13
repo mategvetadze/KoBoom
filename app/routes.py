@@ -12,7 +12,7 @@ from app.services.personalized_difficulty_model import PersonalizedDifficultyMod
 from app.services.hint_timing_model import HintTimingModel
 from app.config import DIFFICULTY_MODEL_PATH, HINT_TIMING_MODEL_PATH
 import numpy as np
-
+from typing import List
 router = APIRouter()
 
 
@@ -254,5 +254,53 @@ def get_user_difficulty_predictions(user_id: int, db: Session = Depends(get_db))
 
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/api/problems", response_model=List[ProblemWithProbability])
+def get_all_problems(db: Session = Depends(get_db)):
+    """Get all problems in the system."""
+    try:
+        problems = db.query(Problem).all()
+
+        response = [
+            {
+                "id": p.id,
+                "title": p.title,
+                "difficulty": p.difficulty,
+                "tags": p.tags,
+                "pass_probability": 0.0  # No user context
+            }
+            for p in problems
+        ]
+
+        return response
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/api/problems/{problem_id}")
+def get_problem(problem_id: int, db: Session = Depends(get_db)):
+    """Get a specific problem by ID."""
+    try:
+        problem = db.query(Problem).filter(Problem.id == problem_id).first()
+        if not problem:
+            raise HTTPException(status_code=400, detail="Problem not found")
+
+        return {
+            "id": problem.id,
+            "title": problem.title,
+            "difficulty": problem.difficulty,
+            "tags": problem.tags,
+            "description": problem.description,
+            "tests": [
+                {
+                    "id": t.id,
+                    "input": t.input_data,
+                    "expected_output": t.expected_output
+                }
+                for t in problem.tests
+            ]
+        }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
