@@ -12,7 +12,7 @@ from app.services.personalized_difficulty_model import PersonalizedDifficultyMod
 from app.services.hint_timing_model import HintTimingModel
 from app.config import DIFFICULTY_MODEL_PATH, HINT_TIMING_MODEL_PATH
 import numpy as np
-from typing import List
+
 router = APIRouter()
 
 
@@ -132,8 +132,11 @@ def submit_solution(request: SubmissionRequest, db: Session = Depends(get_db)):
         db.add(user_profile)
         db.commit()
 
-        # Recompute ALL predictions
-        _recompute_all_predictions(user.id, db)
+        # Recompute ALL predictions (with error handling)
+        try:
+            _recompute_all_predictions(user.id, db)
+        except Exception as e:
+            print(f"Warning: Could not recompute predictions: {e}")
 
         # If accepted, delete the prediction row for this problem (they solved it)
         if is_accepted:
@@ -153,55 +156,71 @@ def submit_solution(request: SubmissionRequest, db: Session = Depends(get_db)):
             ).first()
             pass_prob_on_this = prediction.pass_probability if prediction else 0.5
 
-        # Hint logic
+        # Hint logic (with error handling)
         hint = ""
         hint_given = False
 
         if not is_accepted and status != "syntax":
-            if problem.correct_solution:
-                analyzer = SolutionAnalyzer()
-                detailed_analysis = analyzer.analyze_mistake(request.code, problem.correct_solution, status)
-                failure_for_embedding = detailed_analysis
-            else:
-                failure_for_embedding = failure_analysis
+            try:
+                if problem.correct_solution:
+                    analyzer = SolutionAnalyzer()
+                    detailed_analysis = analyzer.analyze_mistake(request.code, problem.correct_solution, status)
+                    failure_for_embedding = detailed_analysis
+                else:
+                    failure_for_embedding = failure_analysis
 
-            # Predict if hint should be given
-            hint_timing_model = HintTimingModel(HINT_TIMING_MODEL_PATH)
-            hint_features = np.array([[float(request.time_spent_seconds), np.random.poisson(3)]])
-            hint_prob = float(hint_timing_model.predict(hint_features)[0][0])
+                # Predict if hint should be given (with error handling)
+                try:
+                    hint_timing_model = HintTimingModel(HINT_TIMING_MODEL_PATH)
+                    hint_features = np.array([[float(request.time_spent_seconds), np.random.poisson(3)]])
+                    hint_prob = float(hint_timing_model.predict(hint_features)[0][0])
 
-            if hint_prob > 0.5:
-                mentor = MentorService()
-                hint = mentor.generate_hint(
-                    failure_type=status,
-                    failure_analysis=failure_for_embedding,
-                    problem_title=problem.title,
-                    problem_tags=problem.tags
-                )
-                hint_given = True
-                submission.hint_given = 1
-                db.add(submission)
-                db.commit()
+                    if hint_prob > 0.5:
+                        mentor = MentorService()
+                        hint = mentor.generate_hint(
+                            failure_type=status,
+                            failure_analysis=failure_for_embedding,
+                            problem_title=problem.title,
+                            problem_tags=problem.tags
+                        )
+                        hint_given = True
+                        submission.hint_given = 1
+                        db.add(submission)
+                        db.commit()
+                except Exception as e:
+                    print(f"Warning: Could not generate hint: {e}")
+                    hint = "Review the problem requirements carefully."
+            except Exception as e:
+                print(f"Warning: Hint generation failed: {e}")
+                hint = "Keep practicing!"
 
-        # Get recommendations (3 problems user is most likely to pass)
-        mentor = MentorService()
-        rec_problems, explanation = mentor.recommend_problems(
-            failure_analysis=failure_analysis,
-            current_problem=problem,
-            is_accepted=is_accepted,
-            db=db,
-            user_id=user.id
-        )
+        # Get recommendations (with error handling)
+        rec_response = []
+        explanation = "Keep practicing!"
 
-        rec_response = [
-            ProblemRecommendation(
-                id=p.id,
-                title=p.title,
-                difficulty=p.difficulty,
-                tags=p.tags
+        try:
+            mentor = MentorService()
+            rec_problems, explanation = mentor.recommend_problems(
+                failure_analysis=failure_analysis,
+                current_problem=problem,
+                is_accepted=is_accepted,
+                db=db,
+                user_id=user.id
             )
-            for p in rec_problems
-        ]
+
+            rec_response = [
+                ProblemRecommendation(
+                    id=p.id,
+                    title=p.title,
+                    difficulty=p.difficulty,
+                    tags=p.tags
+                )
+                for p in rec_problems
+            ]
+        except Exception as e:
+            print(f"Warning: Could not get recommendations: {e}")
+            rec_response = []
+            explanation = "Keep practicing!"
 
         return SubmissionResponse(
             success=True,
@@ -217,6 +236,44 @@ def submit_solution(request: SubmissionRequest, db: Session = Depends(get_db)):
         raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/api/problems")
+def get_all_problems(db: Session = Depends(get_db)):
+    """Get all problems"""
+    problems = db.query(Problem).all()
+    return [
+        {
+            "id": p.id,
+            "title": p.title,
+            "difficulty": p.difficulty,
+            "tags": p.tags,
+        }
+        for p in problems
+    ]
+
+
+@router.get("/api/problems/{problem_id}")
+def get_problem(problem_id: int, db: Session = Depends(get_db)):
+    """Get a specific problem with tests"""
+    problem = db.query(Problem).filter(Problem.id == problem_id).first()
+    if not problem:
+        raise HTTPException(status_code=404, detail="Problem not found")
+
+    return {
+        "id": problem.id,
+        "title": problem.title,
+        "difficulty": problem.difficulty,
+        "tags": problem.tags,
+        "description": problem.description,
+        "tests": [
+            {
+                "input": t.input_data,
+                "expected_output": t.expected_output
+            }
+            for t in problem.tests
+        ]
+    }
 
 
 @router.get("/api/user/{user_id}/difficulty-predictions", response_model=UserDifficultyPredictionsResponse)
@@ -254,53 +311,5 @@ def get_user_difficulty_predictions(user_id: int, db: Session = Depends(get_db))
 
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.get("/api/problems", response_model=List[ProblemWithProbability])
-def get_all_problems(db: Session = Depends(get_db)):
-    """Get all problems in the system."""
-    try:
-        problems = db.query(Problem).all()
-
-        response = [
-            {
-                "id": p.id,
-                "title": p.title,
-                "difficulty": p.difficulty,
-                "tags": p.tags,
-                "pass_probability": 0.0  # No user context
-            }
-            for p in problems
-        ]
-
-        return response
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-@router.get("/api/problems/{problem_id}")
-def get_problem(problem_id: int, db: Session = Depends(get_db)):
-    """Get a specific problem by ID."""
-    try:
-        problem = db.query(Problem).filter(Problem.id == problem_id).first()
-        if not problem:
-            raise HTTPException(status_code=400, detail="Problem not found")
-
-        return {
-            "id": problem.id,
-            "title": problem.title,
-            "difficulty": problem.difficulty,
-            "tags": problem.tags,
-            "description": problem.description,
-            "tests": [
-                {
-                    "id": t.id,
-                    "input": t.input_data,
-                    "expected_output": t.expected_output
-                }
-                for t in problem.tests
-            ]
-        }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

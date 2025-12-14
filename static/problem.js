@@ -69,21 +69,127 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   /* ======================
-     RUN / SUBMIT (DEMO)
+     VERDICT MODAL
+  ====================== */
+  function showVerdict(result) {
+    const modal = document.createElement("div");
+    modal.className = "verdict-modal";
+
+    const isAccepted = result.status === "accepted";
+    const statusColor = isAccepted ? "#22c55e" : "#ef4444";
+    const statusText = isAccepted ? "✓ ACCEPTED" : "✗ " + result.status.toUpperCase();
+
+    let hintHTML = "";
+    if (result.hint && result.hint.trim()) {
+      hintHTML = `<div class="verdict-hint"><strong>Hint:</strong> ${result.hint}</div>`;
+    }
+
+    let recsHTML = "";
+    if (result.recommendations && result.recommendations.length > 0) {
+      recsHTML = `
+        <div class="verdict-recommendations">
+          <strong>Next Problems:</strong>
+          <ul>
+            ${result.recommendations.map(r => `<li>${r.title} (${r.difficulty})</li>`).join("")}
+          </ul>
+        </div>
+      `;
+    }
+
+    let explanationHTML = "";
+    if (result.explanation && result.explanation.trim()) {
+      explanationHTML = `<div class="verdict-explanation"><em>${result.explanation}</em></div>`;
+    }
+
+    modal.innerHTML = `
+      <div class="verdict-content">
+        <div class="verdict-header" style="color: ${statusColor}">
+          ${statusText}
+        </div>
+        
+        <div class="verdict-body">
+          ${hintHTML}
+          ${recsHTML}
+          ${explanationHTML}
+        </div>
+        
+        <div class="verdict-actions">
+          <button class="verdict-btn" onclick="location.reload()">Close</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // If there's a hint, also show notification
+    if (result.hint && result.hint.trim()) {
+      showHintNotification(result.hint);
+    }
+  }
+
+  function showHintNotification(hint) {
+    const notification = document.createElement("div");
+    notification.className = "hint-notification";
+
+    notification.innerHTML = `
+      <div class="hint-notification-header">Hint Available</div>
+      <div class="hint-notification-text">${hint}</div>
+    `;
+
+    document.body.appendChild(notification);
+
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+      notification.classList.add("fade-out");
+      setTimeout(() => notification.remove(), 300);
+    }, 5000);
+  }
+
+  /* ======================
+     RUN / SUBMIT
   ====================== */
   document.querySelector(".btn:not(.primary)")?.addEventListener("click", () =>
     alert("Run clicked (demo)")
   );
 
-  document.querySelector(".btn.primary")?.addEventListener("click", () =>
-    alert("Submit clicked (demo)")
-  );
+  document.querySelector(".btn.primary")?.addEventListener("click", async () => {
+    const code = document.querySelector(".code-editor").value;
+    const language = document.querySelector(".lang-pill").value;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/mentor/submit/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_id: 1,
+          problem_id: currentId,
+          code: code,
+          time_spent_seconds: 0,
+        }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        alert(`Error: ${error.detail}`);
+        return;
+      }
+
+      const result = await res.json();
+      console.log("Full response:", result);
+      showVerdict(result);
+    } catch (err) {
+      console.error(err);
+      alert("Submission failed: " + err.message);
+    }
+  });
 
   /* ======================
      EDITOR
   ====================== */
   const templates = {
-  java: `import java.util.*;
+    java: `import java.util.*;
 
 public class Main {
     public static void main(String[] args) {
@@ -94,7 +200,7 @@ public class Main {
     }
 }`,
 
-  cpp: `
+    cpp: `
 #include <bits/stdc++.h>
 using namespace std;
 
@@ -105,7 +211,7 @@ int main() {
     return 0;
 }`,
 
-  python: `# write your code here
+    python: `# write your code here
 
 def main():
     pass
@@ -115,7 +221,7 @@ if __name__ == "__main__":
     main()
 `,
 
-  go: `package main
+    go: `package main
 
 import "fmt"
 
@@ -127,7 +233,7 @@ func main() {
 }
 `,
 
-  js: `// write your code here
+    js: `// write your code here
 
 function main() {
 
@@ -135,7 +241,7 @@ function main() {
 
 main();
 `
-};
+  };
 
   const lang = document.querySelector(".lang-pill");
   const editor = document.querySelector(".code-editor");

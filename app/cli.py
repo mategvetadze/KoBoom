@@ -131,5 +131,68 @@ def init_user_predictions(user_id):
     click.echo("✓ Predictions initialized!")
 
 
+@cli.command()
+def seed_problems():
+    """Add sample problems to database"""
+    db = SessionLocal()
+
+    from app.models import Problem, ProblemTest
+
+    # Check if problems already exist
+    existing = db.query(Problem).count()
+    if existing > 0:
+        click.echo(f"✓ Database already has {existing} problems")
+        return
+
+    problems_data = [
+        {
+            "title": "Two Sum",
+            "difficulty": "easy",
+            "tags": "array,hash",
+            "description": "Find two numbers that add up to target",
+            "tests": [
+                {"input": "1 2 3 4 5\n7", "expected_output": "2 5"},
+                {"input": "1 2 3\n5", "expected_output": "2 3"},
+            ]
+        },
+        {
+            "title": "Reverse String",
+            "difficulty": "easy",
+            "tags": "string",
+            "description": "Reverse a given string",
+            "tests": [
+                {"input": "hello", "expected_output": "olleh"},
+                {"input": "world", "expected_output": "dlrow"},
+            ]
+        },
+    ]
+
+    for p_data in problems_data:
+        problem = Problem(
+            title=p_data["title"],
+            difficulty=p_data["difficulty"],
+            tags=p_data["tags"],
+            description=p_data["description"],
+            embedding=b''
+        )
+        db.add(problem)
+        db.flush()
+
+        for test_data in p_data["tests"]:
+            test = ProblemTest(
+                problem_id=problem.id,
+                input_data=test_data["input"],
+                expected_output=test_data["expected_output"]
+            )
+            db.add(test)
+
+        click.echo(f"  ✓ Added: {p_data['title']}")
+
+    db.commit()
+    db.close()
+    click.echo("✓ Sample problems added!")
+
+
+
 if __name__ == "__main__":
     cli()

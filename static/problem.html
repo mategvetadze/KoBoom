@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>KoBoom – Problem</title>
-<link rel="stylesheet" href="/static/problem.css">
+<link rel="stylesheet" href="/static/problem.css?v=3">
 </head>
 
 <body class="problem-page">
@@ -15,16 +16,14 @@
 
   <div class="nav-center">
     <button type="button" class="nav-btn" id="prevProblem">⟵ Prev</button>
-<button type="button" class="nav-btn" id="nextProblem">Next ⟶</button>
-
+    <button type="button" class="nav-btn" id="nextProblem">Next ⟶</button>
   </div>
 
   <div class="nav-right">
-    <button class="btn">Run</button>
-    <button class="btn primary">Submit</button>
+    <button class="btn" id="runBtn">Run</button>
+    <button class="btn primary" id="submitBtn">Submit</button>
   </div>
 </div>
-
 
 <div class="problem-layout">
 
@@ -40,7 +39,7 @@
   <section class="problem-code">
     <div class="code-card">
       <div class="editor-toolbar">
-        <select class="lang-pill">
+        <select class="lang-pill" id="langSelect">
           <option value="java">Java</option>
           <option value="cpp">C++</option>
           <option value="python">Python</option>
@@ -56,7 +55,7 @@
         </div>
       </div>
 
-      <textarea class="code-editor"></textarea>
+      <textarea class="code-editor" id="codeEditor"></textarea>
     </div>
 
     <div class="testcases">
@@ -66,7 +65,7 @@
 
 </div>
 
-<script src="/static/problem.js"></script>
+<script src="/static/problem.js?v=3"></script>
 
 </body>
 </html>
