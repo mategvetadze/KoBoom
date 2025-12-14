@@ -79,6 +79,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const statusColor = isAccepted ? "#22c55e" : "#ef4444";
     const statusText = isAccepted ? "✓ ACCEPTED" : "✗ " + result.status.toUpperCase();
 
+    // Format pass probability as percentage
+    const passPercentage = Math.round(result.pass_probability_on_this * 100);
+    const probabilityHTML = `<div class="verdict-probability">Success Rate: <strong>${passPercentage}%</strong></div>`;
+
     let hintHTML = "";
     if (result.hint && result.hint.trim()) {
       hintHTML = `<div class="verdict-hint"><strong>Hint:</strong> ${result.hint}</div>`;
@@ -106,6 +110,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         <div class="verdict-header" style="color: ${statusColor}">
           ${statusText}
         </div>
+        
+        ${probabilityHTML}
         
         <div class="verdict-body">
           ${hintHTML}

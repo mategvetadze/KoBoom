@@ -132,21 +132,25 @@ def submit_solution(request: SubmissionRequest, db: Session = Depends(get_db)):
         db.add(user_profile)
         db.commit()
 
-        # Recompute ALL predictions (with error handling)
-        try:
-            _recompute_all_predictions(user.id, db)
-        except Exception as e:
-            print(f"Warning: Could not recompute predictions: {e}")
-
-        # If accepted, delete the prediction row for this problem (they solved it)
+        # If accepted, mark prediction as 100% (they solved it) - DO THIS FIRST
         if is_accepted:
-            db.query(PersonalizedDifficultyPrediction).filter(
+            prediction = db.query(PersonalizedDifficultyPrediction).filter(
                 PersonalizedDifficultyPrediction.user_id == user.id,
                 PersonalizedDifficultyPrediction.problem_id == problem.id
-            ).delete()
+            ).first()
+            if prediction:
+                prediction.pass_probability = 1.0
+                prediction.updated_at = datetime.now().isoformat()
+                db.add(prediction)
             db.commit()
+        else:
+            # Only recompute if NOT accepted
+            try:
+                _recompute_all_predictions(user.id, db)
+            except Exception as e:
+                print(f"Warning: Could not recompute predictions: {e}")
 
-        # Get current pass probability on this problem (before deletion if accepted)
+        # Get current pass probability on this problem
         if is_accepted:
             pass_prob_on_this = 1.0  # They passed it
         else:

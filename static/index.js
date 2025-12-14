@@ -3,7 +3,6 @@
 ===================== */
 document.addEventListener("DOMContentLoaded", () => {
 
-
 const API_BASE = "http://127.0.0.1:8000";
 
 let items = [];
@@ -70,11 +69,9 @@ function render() {
 
     return `
     <tr onclick="location.href='/problem?id=${p.id}'">
-
-
         <td>
           <span class="status ${p.status}">
-            ${p.status === "solved" ? "Solved" : "To Do"}
+            ${p.status === "solved" ? "✓ Solved" : "To Do"}
           </span>
         </td>
         <td>
@@ -102,24 +99,25 @@ function render() {
    FETCH DATA
 ===================== */
 
-fetch(`${API_BASE}/api/problems`)
+fetch(`${API_BASE}/api/user/1/difficulty-predictions`)
   .then(res => res.json())
   .then(data => {
-    items = data.map(p => ({
+    console.log("Fetched predictions:", data);
+    items = data.problems.map(p => ({
       id: p.id,
       title: p.title,
       diff: p.difficulty,
       tags: p.tags.split(",").map(t => t.trim()),
-
-      acc: Math.floor(Math.random() * 30 + 40) + "%",
-      status: "todo"
+      acc: Math.round(p.pass_probability * 100) + "%",
+      status: p.pass_probability >= 0.99 ? "solved" : "todo"
     }));
 
     totalEl.textContent = `${items.length} total problems`;
-    solvedEl.textContent = `0 solved`;
+    const solvedCount = items.filter(i => i.status === "solved").length;
+    solvedEl.textContent = `${solvedCount} solved`;
     render();
   })
-  .catch(err => console.error(err));
+  .catch(err => console.error("Failed to fetch predictions:", err));
 
 /* =====================
    EVENTS
@@ -192,7 +190,6 @@ if (savedTheme === "light") {
   document.body.classList.add("light");
   toggleThemeBtn.textContent = "🌞";
 }
-
 
 /* =====================
    SIMPLE AUTH (HOME PAGE)
